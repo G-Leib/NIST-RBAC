@@ -2,12 +2,22 @@ import java.io.*;
 import java.util.*;
 
 class NSITRBAC {
+
+
+
     
     static HashMap<String, Role> roleHierarchy = new HashMap<String, Role>();
     
+    public static HashMap<String, Role> getUsers(String roleHierarchyFile) {
+
+    }
+
+
     public static void main(String[] args) throws Exception {
         File rhfp = new File("roleHierarchy.txt");
         BufferedReader br = new BufferedReader(new FileReader(rhfp));
+
+        // REDO TO COMPLY WITH 2.2
 
         String str;
         String[] roles = new String[2];
@@ -20,6 +30,7 @@ class NSITRBAC {
                 System.out.println("Invalid role hierarchy. Roles may only have one descendant.");
                 System.out.print("Attempting to assign " + roles[0] + " to " + roles[1] + " but ");
                 System.out.print("already assigned to " + newRoles.get(roles[0]).descendantName + ".\n");
+                br.close();
                 System.exit(0);
             }
             newRole.descendantName = roles[1];
@@ -31,8 +42,6 @@ class NSITRBAC {
         ArrayList<String> headRole = new ArrayList<String>();
 
         roleHierarchy.putAll(newRoles);
-
-        // System.out.println("***" + roleHierarchy.get("R4").descendantName);
 
         for (HashMap.Entry<String, Role> role : newRoles.entrySet()) {
             String desc = role.getValue().descendantName;
@@ -86,4 +95,15 @@ class Role {
 
     String roleName;
     String descendantName;
+}
+
+class Grid {
+    int rows;
+    int cols;
+
+    int maxHeight;
+
+    public static void printGrid(){ 
+
+    }
 }
