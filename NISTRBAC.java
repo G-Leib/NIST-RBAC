@@ -3,7 +3,7 @@ import java.util.*;
 
 class NSITRBAC {
     
-    static HashMap<String, Role> roleHierarchy = new HashMap();
+    static HashMap<String, Role> roleHierarchy = new HashMap<String, Role>();
     
     public static void main(String[] args) throws Exception {
         File rhfp = new File("roleHierarchy.txt");
@@ -11,7 +11,7 @@ class NSITRBAC {
 
         String str;
         String[] roles = new String[2];
-        HashMap<String, Role> newRoles = new HashMap();
+        HashMap<String, Role> newRoles = new HashMap<String, Role>();
         while((str = br.readLine()) != null) {
             roles = str.split("\\s+");
             Role newRole = new Role();
