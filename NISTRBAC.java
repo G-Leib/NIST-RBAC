@@ -24,7 +24,6 @@ class NSITRBAC {
             }
             newRole.descendantName = roles[1];
             newRoles.put(newRole.roleName, newRole);
-            System.out.println(roles[0] + '\t' + roles[1]);
         }
 
         br.close();
@@ -43,13 +42,8 @@ class NSITRBAC {
                 roleHierarchy.put(desc, newRole);
                 headRole.add(desc);
             }
-
-
-
             role.getValue().descendant = roleHierarchy.get(desc);
             roleHierarchy.get(desc).ascendant.add(role.getValue());
-
-            System.out.println("Role: " + role.getKey() + ",\tDescendant: " + role.getValue().descendantName);
         }
 
         
