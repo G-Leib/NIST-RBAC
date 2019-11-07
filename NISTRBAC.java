@@ -3,17 +3,16 @@ import java.util.*;
 
 class NSITRBAC {
 
-
-
-    
+    // static variable declarations
     static HashMap<String, Role> roleHierarchy = new HashMap<String, Role>();
     
-    public static HashMap<String, Role> getUsers(String roleHierarchyFile) {
+    // public static HashMap<String, Role> getUsers(String roleHierarchyFile) {
 
-    }
+    // }
 
 
     public static void main(String[] args) throws Exception {
+        System.out.print("\033[H\033[2J");
         File rhfp = new File("roleHierarchy.txt");
         BufferedReader br = new BufferedReader(new FileReader(rhfp));
 
@@ -55,16 +54,27 @@ class NSITRBAC {
             roleHierarchy.get(desc).ascendant.add(role.getValue());
         }
 
-        
-
         for (int i = 0; i < headRole.size(); i++) {
             System.out.println("\n");
-            printHierarchy(headRole.get(i), 0);
+            ArrayList<Integer> branches = new ArrayList<Integer>();
+            printHierarchy(headRole.get(i), 0, branches);
         }
+
+        // Needs validation
+        File rObj = new File("resourceObjects.txt");
+        BufferedReader br2 = new BufferedReader(new FileReader(rObj));
+        ArrayList<String> resObjs = new ArrayList<String>(Arrays.asList(br2.readLine().split("\\s+")));
+
+        System.out.println(resObjs);
+
+        Grid accessControlMatrix = new Grid();
+        accessControlMatrix.colLabels = resObjs;
+        accessControlMatrix.rowLabels = new ArrayList<String>(roleHierarchy.keySet());
+        accessControlMatrix.print();
 
     }
 
-    public static void printHierarchy(String role, int level) throws NullPointerException {
+    public static void printHierarchy(String role, int level, ArrayList<Integer> branches) throws NullPointerException {
         level++;
         System.out.println(role);
         String branch;
@@ -73,17 +83,24 @@ class NSITRBAC {
             for (int i = 0; i < ascendants.size(); i++) {
                 if ((i+1) == ascendants.size()) {
                     branch = "└──";
+                    branches.remove(Integer.valueOf(level));
                 } else {
                     branch = "├──";
+                    if (!branches.contains(level)) {
+                        branches.add(level);
+                    }
                 }
-                if (level > 1) {
-                    String indent = String.format("%" + ((level-1)*3) + "s", "");
-                    System.out.print(indent + branch);
-                } else {
-                    System.out.print(branch);
+                for (int indent = 1; indent < level; indent++) {
+                    if (branches.contains(indent
+                    )) {
+                        System.out.print("\u2502  ");
+                    } else {
+                        System.out.print("   ");
+                    }
                 }
+                System.out.print(branch);
                 String ascendant = roleHierarchy.get(ascendants.get(i).roleName).roleName;
-                printHierarchy(ascendant, level);
+                printHierarchy(ascendant, level, branches);
             }
         }
     }
@@ -98,12 +115,23 @@ class Role {
 }
 
 class Grid {
-    int rows;
-    int cols;
+    int nRows;
+    int nCols;
+
+    ArrayList<String> rowLabels;
+    ArrayList<String> colLabels;
 
     int maxHeight;
 
-    public static void printGrid(){ 
+    public void print(){     
+        System.out.print("\t");
+        for (String col : colLabels) {
+            System.out.print(col + "\t");
+        }
+        System.out.print("\n");
+        for (String row : rowLabels) {
+            System.out.printf("%4s\n", row);
+        }
 
     }
 }
