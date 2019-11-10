@@ -62,7 +62,7 @@ class NSITRBAC {
 
         roleObjectMatrix.roleHierarchy = roleHierarchy;
 
-        //roleObjectMatrix.print();
+        roleObjectMatrix.print();
 
     }
 
@@ -192,8 +192,9 @@ class NSITRBAC {
 
     }
 
-    public static void getPermissions(String fname) throws IOException {
+    public static void getPermissions(String fname) throws Exception {
         String str = new String();
+        // Needs validation
         File ptrf = new File(fname);
         BufferedReader br = new BufferedReader(new FileReader(ptrf));
         while((str = br.readLine()) != null) {
@@ -216,6 +217,11 @@ class NSITRBAC {
             
         }
         br.close();
+
+        for (int i = 0; i < headRole.size(); i++) {
+            roleHierarchy.get(headRole.get(i)).permissions = inheritPermissions(headRole.get(i));
+        }
+
     }
 
     public static void declarePermissions() throws Exception {
@@ -239,6 +245,29 @@ class NSITRBAC {
             }
             role.getValue().permissions.get(role.getValue().roleName).add("control");
         }
+        
+        for (int i = 0; i < headRole.size(); i++) {
+            roleHierarchy.get(headRole.get(i)).permissions = inheritPermissions(headRole.get(i));
+        }
+    }
+
+    public static HashMap<String, ArrayList<String>> inheritPermissions(String role) throws Exception {
+        ArrayList<Role> ascendants = roleHierarchy.get(role).ascendant;
+        if (!ascendants.isEmpty()) {
+            for (int i = 0; i < ascendants.size(); i++) {
+                HashMap<String, ArrayList<String>> ascPerm = inheritPermissions(ascendants.get(i).roleName);
+                for(HashMap.Entry<String, ArrayList<String>> perm : ascPerm.entrySet()) {
+                    roleHierarchy.get(role).permissions.get(perm.getKey()).addAll(perm.getValue());
+                    // Set<String> dropDup = new HashSet<String>(roleHierarchy.get(role).permissions.get(perm.getKey()));
+                    // roleHierarchy.get(role).permissions.get(perm.getKey()) = ArrayList<String>(dropDup);
+                }
+            }
+
+
+        }
+        
+        return roleHierarchy.get(role).permissions;
+        
     }
 
 }
