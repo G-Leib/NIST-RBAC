@@ -40,6 +40,12 @@ class NSITRBAC {
 
         ArrayList<String> headRole = new ArrayList<String>();
 
+        // Needs validation
+        File rObj = new File("resourceObjects.txt");
+        BufferedReader br2 = new BufferedReader(new FileReader(rObj));
+        ArrayList<String> resObjs = new ArrayList<String>(Arrays.asList(br2.readLine().split("\\s+")));
+        br2.close();
+
         roleHierarchy.putAll(newRoles);
 
         for (HashMap.Entry<String, Role> role : newRoles.entrySet()) {
@@ -59,11 +65,6 @@ class NSITRBAC {
             ArrayList<Integer> branches = new ArrayList<Integer>();
             printHierarchy(headRole.get(i), 0, branches);
         }
-
-        // Needs validation
-        File rObj = new File("resourceObjects.txt");
-        BufferedReader br2 = new BufferedReader(new FileReader(rObj));
-        ArrayList<String> resObjs = new ArrayList<String>(Arrays.asList(br2.readLine().split("\\s+")));
 
         System.out.println(resObjs);
 
@@ -112,6 +113,8 @@ class Role {
 
     String roleName;
     String descendantName;
+
+    HashMap<String, ArrayList<String>> permissions = new HashMap<String, ArrayList<String>>();
 }
 
 class Grid {
@@ -122,15 +125,34 @@ class Grid {
     ArrayList<String> colLabels;
 
     int maxHeight;
+    int maxWidth;
 
-    public void print(){     
-        System.out.print("\t");
+    public void print(){
+        String lastRow = rowLabels.get(rowLabels.size()-1);
+        System.out.print("\n");
+        System.out.print("\t\u2502");
         for (String col : colLabels) {
-            System.out.print(col + "\t");
+            System.out.print("   " + col + "   \u2502");
         }
         System.out.print("\n");
         for (String row : rowLabels) {
-            System.out.printf("%4s\n", row);
+            // Fix edges
+            for (String col : colLabels) {
+                System.out.print("\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u254b");
+            }
+            System.out.println("\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u254b");
+            System.out.printf(" %5s  \u2502", row);
+            for (String col : colLabels) {
+                System.out.print("        \u2502");
+            }
+            if (row.equals(lastRow)) {
+                System.out.println();
+                for (String col : colLabels) {
+                    System.out.print("\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u254b");
+                }
+                System.out.println("\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u254b");
+            }
+            System.out.print("\n");
         }
 
     }
