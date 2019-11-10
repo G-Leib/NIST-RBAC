@@ -5,10 +5,6 @@ import java.util.*;
 class NSITRBAC {
     // TODO:
     // query input loop
-    // 4.1b inherit roles
-    // 5 read roleSetsSSD.txt
-    // 5.1 validate n
-    // 5.2 Display constraints
     // 6 read userRoles.txt
     // 6.1a validate repeat users
     // 6.1b validate SSD constraint violations
@@ -28,6 +24,7 @@ class NSITRBAC {
     static ArrayList<String> headRole = new ArrayList<String>();
     static Grid roleObjectMatrix = new Grid();
     static Grid userRoleMatrix = new Grid();
+    static HashMap<Integer, ArrayList<String>> ssdConstraints = new HashMap<Integer, ArrayList<String>>();
 
 
     
@@ -50,19 +47,22 @@ class NSITRBAC {
         declarePermissions();
 
         roleObjectMatrix.roleHierarchy = roleHierarchy;
-
-
         roleObjectMatrix.colLabels = resourceObjects;
         roleObjectMatrix.rowLabels = new ArrayList<String>(roleHierarchy.keySet());
         roleObjectMatrix.print();
 
         assignBasePermissions();
         getPermissions("permissionsToRoles.txt");
-        // inheritPermissions
+
+        for (int i = 0; i < headRole.size(); i++) {
+            roleHierarchy.get(headRole.get(i)).permissions = inheritPermissions(headRole.get(i));
+        }
 
         roleObjectMatrix.roleHierarchy = roleHierarchy;
 
         roleObjectMatrix.print();
+
+        getSSD("roleSetsSSD.txt");
 
     }
 
@@ -108,7 +108,7 @@ class NSITRBAC {
         System.out.print("\033[H\033[2J");
     }
 
-    public static void getRoles(String fname) throws IOException{
+    public static void getRoles(String fname) throws IOException, FileNotFoundException{
         File rhfp = new File(fname);
 
         String str;
@@ -157,7 +157,7 @@ class NSITRBAC {
         }
     } 
 
-    public static void getResources(String fname) throws IOException{
+    public static void getResources(String fname) throws IOException, FileNotFoundException{
         
 
         // Needs validation
@@ -192,7 +192,7 @@ class NSITRBAC {
 
     }
 
-    public static void getPermissions(String fname) throws Exception {
+    public static void getPermissions(String fname) throws IOException, FileNotFoundException {
         String str = new String();
         // Needs validation
         File ptrf = new File(fname);
@@ -218,10 +218,6 @@ class NSITRBAC {
         }
         br.close();
 
-        for (int i = 0; i < headRole.size(); i++) {
-            roleHierarchy.get(headRole.get(i)).permissions = inheritPermissions(headRole.get(i));
-        }
-
     }
 
     public static void declarePermissions() throws Exception {
@@ -246,9 +242,6 @@ class NSITRBAC {
             role.getValue().permissions.get(role.getValue().roleName).add("control");
         }
         
-        for (int i = 0; i < headRole.size(); i++) {
-            roleHierarchy.get(headRole.get(i)).permissions = inheritPermissions(headRole.get(i));
-        }
     }
 
     public static HashMap<String, ArrayList<String>> inheritPermissions(String role) throws Exception {
@@ -258,8 +251,6 @@ class NSITRBAC {
                 HashMap<String, ArrayList<String>> ascPerm = inheritPermissions(ascendants.get(i).roleName);
                 for(HashMap.Entry<String, ArrayList<String>> perm : ascPerm.entrySet()) {
                     roleHierarchy.get(role).permissions.get(perm.getKey()).addAll(perm.getValue());
-                    // Set<String> dropDup = new HashSet<String>(roleHierarchy.get(role).permissions.get(perm.getKey()));
-                    // roleHierarchy.get(role).permissions.get(perm.getKey()) = ArrayList<String>(dropDup);
                 }
             }
 
@@ -268,6 +259,64 @@ class NSITRBAC {
         
         return roleHierarchy.get(role).permissions;
         
+    }
+
+    public static void getSSD(String fname) throws IOException, FileNotFoundException {
+        File ssdf = new File(fname);
+        String str;
+        boolean valid;
+        
+        
+        do {
+            valid = true;
+            BufferedReader br = new BufferedReader(new FileReader(ssdf));
+            int lineNumber = 1;
+            int c = 1;
+            while((str = br.readLine()) != null) {
+                ArrayList<String> rules = new ArrayList<String>(Arrays.asList(str.split("\\s+")));
+                int n = Integer.parseInt(rules.get(0));
+                if(n < 2) {
+                    br.close();
+                    System.out.println("Invalid line found in roleSetsSSD.txt: line " + lineNumber);
+                    System.out.println("Press enter to read it again.");
+                    try {
+                        System.in.read();
+                    } catch(Exception e) {}
+                    ssdConstraints.clear();
+                    valid = false;
+                    break;
+                }
+                ssdConstraints.put(c, rules);
+                c++;
+            }
+            br.close();   
+
+        } while(!valid);
+
+        
+        for(HashMap.Entry<Integer, ArrayList<String>> cons : ssdConstraints.entrySet()) {
+            List<String> roleSet = cons.getValue().subList(1, cons.getValue().size());
+            System.out.println("Constrant " + cons.getKey() + ", n = " + cons.getValue().get(0) + ", set of roles = " + roleSet);
+
+        }
+        
+
+    }
+
+    public static void getUsers(String fname) throws IOException, FileNotFoundException {
+        File urf = new File(fname);
+        String str;
+        boolean valid;
+
+        do {
+            valid = true;
+            BufferedReader br = new BufferedReader(new FileReader(ssdf));
+            int lineNumber = 1;
+            while((str = br.readLine()) != null) {
+                
+
+        } while(!valid);
+
     }
 
 }
