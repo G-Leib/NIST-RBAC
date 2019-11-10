@@ -1,21 +1,67 @@
 import java.io.*;
 import java.util.*;
 
+
 class NSITRBAC {
+    // TODO:
+    // input loop
+    // 2.2 validation
+    // 2.3 outer branches (visual fix)
+    // 3 read object file
+    // 3.1 validate object file
+    // 3.2 print empty matrix
+    // 4.5 read permissionsToroles.txt
+    // 4.1a grant permissions
+    // 4.2 ignore redundant permissions
+    // 4.3 each role controls itself
+    // 4.4 each role owns ascendants
+    // 4.1b inherit roles
+    // 4.6 display new ACM
+    // 5 read roleSetsSSD.txt
+    // 5.1 validate n
+    // 5.2 Display constraints
+    // 6 read userRoles.txt
+    // 6.1a validate repeat users
+    // 6.1b validate SSD constraint violations
+    // 6.2 display user-role matrix
+    // 7 query users
+    // 7.1 display prompts for queries (allow empty for access rights and objects)
+    // 7.2 invalid user if user not found back to 7.1
+    // 7.3 if accessRights and/or object selections empty, display all accessRights and/or objects go to 7.7
+    // 7.4 invalid user if object not found back to 7.1
+    // 7.5 if accessright empty display all rights on this object go to 7.7
+    // 7.6 check if user has right to object "authorized" if yes "rejected" otherwise
+    // 7.7 "another query?"
 
 
-
-    
     static HashMap<String, Role> roleHierarchy = new HashMap<String, Role>();
     
-    public static HashMap<String, Role> getUsers(String roleHierarchyFile) {
+
+    public static void main(String[] args) throws Exception {
+
+        String os = System.getProperty("os.name");
+        if(os.contains("Windows")) {
+            new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+        } else {
+            Runtime.getRuntime().exec("clear");
+        }
+
+        ArrayList<String> headRole = getRoles("roleHierarchy.txt");
+              
+        for (int i = 0; i < headRole.size(); i++) {
+            System.out.println("\n");
+            printHierarchy(headRole.get(i), 0);
+        }
+
+        // 3 Get Objects
+
+        //3.2 print matrix
 
     }
 
-
-    public static void main(String[] args) throws Exception {
-        File rhfp = new File("roleHierarchy.txt");
-        BufferedReader br = new BufferedReader(new FileReader(rhfp));
+    public static ArrayList<String> getRoles(String roleHierarchyFile) throws Exception {
+        File f = new File(roleHierarchyFile);
+        BufferedReader br = new BufferedReader(new FileReader(f));
 
         // REDO TO COMPLY WITH 2.2
 
@@ -37,8 +83,7 @@ class NSITRBAC {
             newRoles.put(newRole.roleName, newRole);
         }
 
-        br.close();
-
+        
         ArrayList<String> headRole = new ArrayList<String>();
 
         roleHierarchy.putAll(newRoles);
@@ -55,14 +100,11 @@ class NSITRBAC {
             roleHierarchy.get(desc).ascendant.add(role.getValue());
         }
 
-        
+        br.close();
 
-        for (int i = 0; i < headRole.size(); i++) {
-            System.out.println("\n");
-            printHierarchy(headRole.get(i), 0);
-        }
-
+        return headRole;
     }
+
 
     public static void printHierarchy(String role, int level) throws NullPointerException {
         level++;
@@ -72,9 +114,9 @@ class NSITRBAC {
         if (!ascendants.isEmpty()) {
             for (int i = 0; i < ascendants.size(); i++) {
                 if ((i+1) == ascendants.size()) {
-                    branch = "└──";
+                    branch = "\u2514\u2501\u2501";
                 } else {
-                    branch = "├──";
+                    branch = "\u2523\u2501\u2501";
                 }
                 if (level > 1) {
                     String indent = String.format("%" + ((level-1)*3) + "s", "");
@@ -89,6 +131,9 @@ class NSITRBAC {
     }
 }
 
+
+
+
 class Role {
     Role descendant;
     ArrayList<Role> ascendant = new ArrayList<Role>();
@@ -102,6 +147,7 @@ class Grid {
     int cols;
 
     int maxHeight;
+    String matrixName;
 
     public static void printGrid(){ 
 
