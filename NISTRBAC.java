@@ -4,17 +4,8 @@ import java.util.*;
 
 class NSITRBAC {
     // TODO:
-    // input loop
-    // 2.2 validation
-    // 2.3 outer branches (visual fix)
-    // 3.1 validate object file
-    // 4.5 read permissionsToRoles.txt
-    // 4.1a grant permissions
-    // 4.2 ignore redundant permissions
-    // 4.3 each role controls itself
-    // 4.4 each role owns ascendants
+    // query input loop
     // 4.1b inherit roles
-    // 4.6 display new ACM
     // 5 read roleSetsSSD.txt
     // 5.1 validate n
     // 5.2 Display constraints
@@ -33,115 +24,45 @@ class NSITRBAC {
 
 
     static HashMap<String, Role> roleHierarchy = new HashMap<String, Role>();
+    static ArrayList<String> resourceObjects = new ArrayList<String>();
+    static ArrayList<String> headRole = new ArrayList<String>();
+    static Grid roleObjectMatrix = new Grid();
+    static Grid userRoleMatrix = new Grid();
 
 
     
 
     public static void main(String[] args) throws Exception {
 
-        // clearTerminal();
+        clearTerminal();
         
-        File rhfp = new File("roleHierarchy.txt");
-        BufferedReader br = new BufferedReader(new FileReader(rhfp));
-
-        // REDO TO COMPLY WITH 2.2
-
-        String str;
-        String[] roles = new String[2];
-        HashMap<String, Role> newRoles = new HashMap<String, Role>();
-        while((str = br.readLine()) != null) {
-            roles = str.split("\\s+");
-            Role newRole = new Role();
-            newRole.roleName = roles[0];
-            if (newRoles.containsKey(newRole.roleName) && (!newRoles.get(roles[0]).descendantName.equals(roles[1]))) {
-                System.out.println("Invalid role hierarchy. Roles may only have one descendant.");
-                System.out.print("Attempting to assign " + roles[0] + " to " + roles[1] + " but ");
-                System.out.print("already assigned to " + newRoles.get(roles[0]).descendantName + ".\n");
-                br.close();
-                System.exit(0);
-            }
-            newRole.descendantName = roles[1];
-            newRoles.put(newRole.roleName, newRole);
-        }
-
-
-
-        
-        ArrayList<String> headRole = new ArrayList<String>();
-
-        // Needs validation
-        File rObj = new File("resourceObjects.txt");
-        BufferedReader br2 = new BufferedReader(new FileReader(rObj));
-        ArrayList<String> newObjects = new ArrayList<String>(Arrays.asList(br2.readLine().split("\\s+")));
-        br2.close();
-        ArrayList<String> resourceObjects = new ArrayList<String>();
-
-        resourceObjects.addAll(newRoles.keySet());
-        resourceObjects.addAll(newObjects);
-
-        roleHierarchy.putAll(newRoles);
-
-        for (HashMap.Entry<String, Role> role : newRoles.entrySet()) {
-            String desc = role.getValue().descendantName;
-            if (!roleHierarchy.containsKey(desc)) {
-                Role newRole = new Role();
-                newRole.roleName = desc;
-                roleHierarchy.put(desc, newRole);
-                headRole.add(desc);
-            }
-            role.getValue().descendant = roleHierarchy.get(desc);
-            roleHierarchy.get(desc).ascendant.add(role.getValue());
-            for (int r = 0; r < resourceObjects.size(); r++) {
-                roleHierarchy.get(role.getKey()).permissions.put(resourceObjects.get(r), new ArrayList<String>());
-            }
-        }
+        getRoles("roleHierarchy.txt");
 
         for (int i = 0; i < headRole.size(); i++) {
             System.out.println("\n");
             ArrayList<Integer> branches = new ArrayList<Integer>();
             printHierarchy(headRole.get(i), 0, branches);
-            for (int r = 0; r < resourceObjects.size(); r++) {
-                roleHierarchy.get(headRole.get(i)).permissions.put(resourceObjects.get(r), new ArrayList<String>());
-            }
+
         }
 
-        Grid roleObjectMatrix = new Grid();
+        getResources("resourceObjects.txt");
 
-        roleObjectMatrix.colLabels = resourceObjects;
-        roleObjectMatrix.rowLabels = new ArrayList<String>(roleHierarchy.keySet());
-        //roleObjectMatrix.print();
-
-        // Add validation
-        File ptrf = new File("permissionsToRoles.txt");
-        BufferedReader br3 = new BufferedReader(new FileReader(ptrf));
-        while((str = br3.readLine()) != null) {
-            String[] newPermissions = str.split("\\s+");
-            if(!roleHierarchy.get(newPermissions[0]).permissions.containsKey(newPermissions[2])) {
-                roleHierarchy.get(newPermissions[0]).permissions.put(newPermissions[2], new ArrayList<String>());
-            }
-            if(!roleHierarchy.get(newPermissions[0]).permissions.get(newPermissions[2]).contains(newPermissions[1])) {
-                roleHierarchy.get(newPermissions[0]).permissions.get(newPermissions[2]).add(newPermissions[1]);
-            }
-            int width = newPermissions[1].length();
-            int height = roleHierarchy.get(newPermissions[0]).permissions.get(newPermissions[2]).size();
-            if (width > roleObjectMatrix.maxWidth) {
-                roleObjectMatrix.maxWidth = width;
-            }
-            if (height > roleObjectMatrix.maxHeight) {
-                roleObjectMatrix.maxHeight = height;
-            }
-
-            
-        }
-        br3.close();
+        declarePermissions();
 
         roleObjectMatrix.roleHierarchy = roleHierarchy;
 
+
+        roleObjectMatrix.colLabels = resourceObjects;
+        roleObjectMatrix.rowLabels = new ArrayList<String>(roleHierarchy.keySet());
         roleObjectMatrix.print();
 
-        System.out.println(roleHierarchy.get("R1").permissions);
-        System.out.println(roleHierarchy.get("R2").permissions);
-        System.out.println(roleHierarchy.get("R3").permissions);
+        assignBasePermissions();
+        getPermissions("permissionsToRoles.txt");
+        // inheritPermissions
+
+        roleObjectMatrix.roleHierarchy = roleHierarchy;
+
+        //roleObjectMatrix.print();
 
     }
 
@@ -187,6 +108,139 @@ class NSITRBAC {
         System.out.print("\033[H\033[2J");
     }
 
+    public static void getRoles(String fname) throws IOException{
+        File rhfp = new File(fname);
+
+        String str;
+        String[] roles = new String[2];
+        HashMap<String, Role> newRoles = new HashMap<String, Role>();
+        do {
+            BufferedReader br = new BufferedReader(new FileReader(rhfp));
+            int lineNumber = 1;
+            while((str = br.readLine()) != null) {
+                roles = str.split("\\s+");
+                Role newRole = new Role();
+                newRole.roleName = roles[0];
+                if (newRoles.containsKey(newRole.roleName) && (!newRoles.get(roles[0]).descendantName.equals(roles[1]))) {
+                    br.close();
+                    System.out.println("Invalid line is found in roleHierarchy.txt: " + lineNumber + ".");
+                    System.out.println("Press enter to read it again.");
+                    try {
+                        System.in.read();
+                    } catch(Exception e) {}
+                    break;
+                }
+                newRole.descendantName = roles[1];
+                newRoles.put(newRole.roleName, newRole);
+
+                roleHierarchy.putAll(newRoles);
+                lineNumber++;
+            }
+            if(str == null) {
+                br.close();
+                break;
+            }
+        } while(true);
+
+
+        for (HashMap.Entry<String, Role> role : newRoles.entrySet()) {
+            String desc = role.getValue().descendantName;
+            if (!roleHierarchy.containsKey(desc)) {
+                Role newRole = new Role();
+                newRole.roleName = desc;
+                roleHierarchy.put(desc, newRole);
+                headRole.add(desc);
+            }
+            role.getValue().descendant = roleHierarchy.get(desc);
+            roleHierarchy.get(desc).ascendant.add(role.getValue());
+
+        }
+    } 
+
+    public static void getResources(String fname) throws IOException{
+        
+
+        // Needs validation
+        File rObj = new File(fname);
+        boolean valid = false;
+        ArrayList<String> validResources = new ArrayList<String>();
+
+        do {
+            BufferedReader br = new BufferedReader(new FileReader(rObj));
+            ArrayList<String> newObjects = new ArrayList<String>(Arrays.asList(br.readLine().split("\\s+")));
+            
+            br.close();
+            for(int i = 0; i < newObjects.size(); i++){
+                if (validResources.contains(newObjects.get(i))) {
+                    System.out.println("Duplicate resource found: " + newObjects.get(i));
+                    System.out.println("Press enter to read it again.");
+                    try {
+                        System.in.read();
+                    } catch(Exception e) {}
+                    valid = false;
+                    validResources.clear();
+                    break;
+                } else {
+                    validResources.add(newObjects.get(i));
+                    valid = true;
+                }
+            }
+        } while(!valid);
+
+        resourceObjects.addAll(roleHierarchy.keySet());
+        resourceObjects.addAll(validResources);
+
+    }
+
+    public static void getPermissions(String fname) throws IOException {
+        String str = new String();
+        File ptrf = new File(fname);
+        BufferedReader br = new BufferedReader(new FileReader(ptrf));
+        while((str = br.readLine()) != null) {
+            String[] newPermissions = str.split("\\s+");
+            if(!roleHierarchy.get(newPermissions[0]).permissions.containsKey(newPermissions[2])) {
+                roleHierarchy.get(newPermissions[0]).permissions.put(newPermissions[2], new ArrayList<String>());
+            }
+            if(!roleHierarchy.get(newPermissions[0]).permissions.get(newPermissions[2]).contains(newPermissions[1])) {
+                roleHierarchy.get(newPermissions[0]).permissions.get(newPermissions[2]).add(newPermissions[1]);
+            }
+            int width = newPermissions[1].length();
+            int height = roleHierarchy.get(newPermissions[0]).permissions.get(newPermissions[2]).size();
+            if (width > roleObjectMatrix.maxWidth) {
+                roleObjectMatrix.maxWidth = width;
+            }
+            if (height > roleObjectMatrix.maxHeight) {
+                roleObjectMatrix.maxHeight = height;
+            }
+
+            
+        }
+        br.close();
+    }
+
+    public static void declarePermissions() throws Exception {
+        for (HashMap.Entry<String, Role> role : roleHierarchy.entrySet()) {
+            for (int r = 0; r < resourceObjects.size(); r++) {
+                roleHierarchy.get(role.getKey()).permissions.put(resourceObjects.get(r), new ArrayList<String>());
+            }
+        }
+
+    }
+
+    public static void assignBasePermissions() throws Exception {
+        // Control self and own ascendants
+        for (HashMap.Entry<String, Role> role : roleHierarchy.entrySet()) {
+
+            ArrayList<Role> asc = role.getValue().ascendant;
+            if (!asc.isEmpty()) {
+                for(int a = 0; a < asc.size(); a++) {
+                    role.getValue().permissions.get(asc.get(a).roleName).add("own");
+                }
+            }
+            role.getValue().permissions.get(role.getValue().roleName).add("control");
+        }
+    }
+
 }
 
 
@@ -215,6 +269,10 @@ class Grid {
     int maxWidth = 4;
 
     public void print(){
+        maxWidth = maxWidth + 2;
+        if(maxWidth%2!=0) {
+            maxWidth++;
+        }
         String lines = "";
         for(int l = 0; l < (maxWidth+2); l++) {
             lines = lines + "\u2501";
@@ -227,7 +285,7 @@ class Grid {
 
         // Top left corner
         System.out.print("\n");
-        System.out.print("\t\u2502");
+        System.out.printf("%" + colHeadSpace + "s%4s%" + colHeadSpace + "s\u2502", " ", " ", " ");
 
         // Column headers
         for (String col : colLabels) {
@@ -237,7 +295,6 @@ class Grid {
         // Rows print loop
         System.out.print("\n");
         for (String row : rowLabels) {
-            // TODO: Fix edges
             // Top edge of row
             for (String col : colLabels) {
                 System.out.print(lines + "\u254b");
@@ -247,9 +304,9 @@ class Grid {
             for(int rowLine = 0; rowLine < maxHeight; rowLine++) {
                 
                 if(rowLine==midRow) {
-                    System.out.printf(" %5s  \u2502", row);
+                    System.out.printf("%" + colHeadSpace + "s%4s%" + colHeadSpace + "s\u2502", " ", row, " ");
                 } else {
-                    System.out.printf("%8s\u2502", " ");
+                    System.out.printf("%" + (maxWidth+2)+ "s\u2502", " ");
                 }
                 for (String col : colLabels) {
 
