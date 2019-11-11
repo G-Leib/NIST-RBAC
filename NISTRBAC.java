@@ -3,21 +3,6 @@ import java.util.*;
 
 
 class NSITRBAC {
-    // TODO:
-    // query input loop
-    // 6 read userRoles.txt
-    // 6.1a validate repeat users
-    // 6.1b validate SSD constraint violations
-    // 6.2 display user-role matrix
-    // 7 query users
-    // 7.1 display prompts for queries (allow empty for access rights and objects)
-    // 7.2 invalid user if user not found back to 7.1
-    // 7.3 if accessRights and/or object selections empty, display all accessRights and/or objects go to 7.7
-    // 7.4 invalid user if object not found back to 7.1
-    // 7.5 if accessright empty display all rights on this object go to 7.7
-    // 7.6 check if user has right to object "authorized" if yes "rejected" otherwise
-    // 7.7 "another query?"
-
 
     static HashMap<String, Role> roleHierarchy = new HashMap<String, Role>();
     static ArrayList<String> resourceObjects = new ArrayList<String>();
@@ -25,6 +10,7 @@ class NSITRBAC {
     static Grid roleObjectMatrix = new Grid();
     static Grid userRoleMatrix = new Grid();
     static HashMap<Integer, ArrayList<String>> ssdConstraints = new HashMap<Integer, ArrayList<String>>();
+    static HashMap<String, ArrayList<String>> userRoles = new HashMap<String, ArrayList<String>>();
 
 
     
@@ -49,7 +35,7 @@ class NSITRBAC {
         roleObjectMatrix.roleHierarchy = roleHierarchy;
         roleObjectMatrix.colLabels = resourceObjects;
         roleObjectMatrix.rowLabels = new ArrayList<String>(roleHierarchy.keySet());
-        roleObjectMatrix.print();
+        roleObjectMatrix.printACM();
 
         assignBasePermissions();
         getPermissions("permissionsToRoles.txt");
@@ -60,10 +46,90 @@ class NSITRBAC {
 
         roleObjectMatrix.roleHierarchy = roleHierarchy;
 
-        roleObjectMatrix.print();
+        roleObjectMatrix.printACM();
 
         getSSD("roleSetsSSD.txt");
 
+        getUsers("userRoles.txt");
+
+        userRoleMatrix.users = userRoles;
+        userRoleMatrix.rowLabels = new ArrayList<String>(userRoles.keySet());
+        userRoleMatrix.colLabels = new ArrayList<String>(roleHierarchy.keySet());
+        userRoleMatrix.printURM();
+
+        queryConsole();
+
+    }
+
+    public static void queryConsole() throws IOException {
+        Scanner scan = new Scanner(System.in);
+        while(true) {
+            boolean allObjects = false;
+            boolean allRights = false;
+            boolean hasRights = false;
+            System.out.print("Please enter the user in your query: ");
+            String user = scan.nextLine();
+            while(!userRoles.containsKey(user)){
+                System.out.print("Invalid user, try again: ");
+                user = scan.nextLine();
+            }
+            System.out.println("Please enter the object in your query (hit enter for any): ");
+            String object = scan.nextLine();
+            while(!resourceObjects.contains(object) & object != null & !object.isEmpty()) {
+                System.out.print("Invalid object, try again: ");
+                object = scan.nextLine();
+            }
+            System.out.println("Please enter the access right in your query (hit enter for any): ");
+            String accessRight = scan.nextLine();
+
+            if(object == null | object.isEmpty()){
+                allObjects = true;
+            }
+            if(accessRight == null | accessRight.isEmpty()){
+                allRights = true;
+            }
+            
+            ArrayList<String> roles = userRoles.get(user);
+
+            if(allObjects & allRights){
+                for(int r = 0; r < roles.size(); r++) {
+                    for(HashMap.Entry<String, ArrayList<String>> perm : roleHierarchy.get(roles.get(r)).permissions.entrySet()) {
+                        for(int o = 0; o < perm.getValue().size(); o++) {
+                            if(!perm.getValue().get(o).isEmpty())
+                                System.out.println(perm.getKey() + "\t" + perm.getValue());
+                        }
+                    }
+                }
+            } else {
+                ArrayList<String> rights = new ArrayList<String>();
+                for(int r = 0; r < roles.size(); r++) {
+                    rights = roleHierarchy.get(roles.get(r)).permissions.get(object);
+                    if (!allObjects & allRights) {
+                        System.out.println(roles.get(r));
+                    } else if(rights.contains(accessRight)) {
+                        hasRights = true;
+                    }
+
+                }
+            }
+
+            if(!allObjects & !allRights) {
+                if(hasRights) {
+                    System.out.println("Accepted");
+                } else {
+                    System.out.println("Rejected");
+                }
+            }
+
+            System.out.print("Would you like to continue for the next query? ");
+            String anotherQuery = scan.nextLine();
+            if(!anotherQuery.equalsIgnoreCase("yes")) {
+                System.out.println("\nGoodbye");
+                System.exit(0);
+            }
+
+
+        }
     }
 
     public static void printHierarchy(String role, int level, ArrayList<Integer> branches) throws NullPointerException {
@@ -288,6 +354,7 @@ class NSITRBAC {
                 }
                 ssdConstraints.put(c, rules);
                 c++;
+                lineNumber++;
             }
             br.close();   
 
@@ -310,9 +377,51 @@ class NSITRBAC {
 
         do {
             valid = true;
-            BufferedReader br = new BufferedReader(new FileReader(ssdf));
+            userRoles.clear();
+            BufferedReader br = new BufferedReader(new FileReader(urf));
             int lineNumber = 1;
             while((str = br.readLine()) != null) {
+                ArrayList<String> newUserRoles = new ArrayList<String>(Arrays.asList(str.split("\\s+")));
+                ArrayList<String> roles = new ArrayList<String>(newUserRoles.subList(1, newUserRoles.size()));
+                String user = newUserRoles.get(0);
+                if(userRoles.containsKey(user)) {
+                    br.close();
+                    System.out.println("Invalid line found at line: " + lineNumber + " due to duplicate user.");
+                    System.out.println("Press enter to read again.");
+                    valid = false;
+                    try {
+                        System.in.read();
+                    } catch(Exception e) {}
+                    break;
+                }
+
+                int constraint = -1;
+                for(HashMap.Entry<Integer, ArrayList<String>> cons : ssdConstraints.entrySet()) {
+                    int c = 0;
+                    List<String> roleSet = cons.getValue().subList(1, cons.getValue().size());
+                    for(int r = 0; r < roles.size(); r++) {
+                        if (roleSet.contains(roles.get(r))) {
+                            c ++;
+                        }
+                    }
+                    if(c >= Integer.parseInt(cons.getValue().get(0))) {
+                        valid = false;
+                        constraint = cons.getKey();
+                    }
+                }
+                if (!valid) {
+                    br.close();
+                    System.out.println("Invalid line found at line: " + lineNumber + " due to constraint #" + constraint + ".");
+                    System.out.println("Press enter to read again.");
+                    try {
+                        System.in.read();
+                    } catch(Exception e) {}
+                    break;
+                }
+                lineNumber++;
+                userRoles.put(user, roles);
+
+            }
                 
 
         } while(!valid);
@@ -339,6 +448,7 @@ class Grid {
     int nCols;
 
     HashMap<String, Role> roleHierarchy = new HashMap<String, Role>();
+    HashMap<String, ArrayList<String>> users = new HashMap<String, ArrayList<String>>();
 
     ArrayList<String> rowLabels;
     ArrayList<String> colLabels;
@@ -346,7 +456,7 @@ class Grid {
     int maxHeight = 1;
     int maxWidth = 4;
 
-    public void print(){
+    public void printACM(){
         maxWidth = maxWidth + 2;
         if(maxWidth%2!=0) {
             maxWidth++;
@@ -414,6 +524,55 @@ class Grid {
             }
             System.out.print("\n");
         }
+
+    }
+
+    public void printURM(){
+        maxWidth = 3;
+        String lines = "";
+        for(int l = 0; l < (maxWidth+2); l++) {
+            lines = lines + "\u2501";
+        }
+        String lastRow = rowLabels.get(rowLabels.size()-1);
+
+        // Top left corner
+        System.out.print("\n");
+        System.out.print("     \u2502");
+
+        // Column headers
+        for (String col : colLabels) {
+            System.out.printf(" %3s \u2502", col);
+        }
+
+        // Rows print loop
+        System.out.print("\n");
+        for (String row : rowLabels) {
+            // Top edge of row
+            for (String col : colLabels) {
+                System.out.print(lines + "\u254b");
+            }
+            System.out.println(lines + "\u254b");
+
+            System.out.printf(" %3s \u2502", row);
+            for (String col : colLabels) {
+                ArrayList<String> roles = users.get(row);
+                if (roles.contains(col)) {
+                    System.out.print("  +  \u2502");
+                } else {
+                    System.out.print("     \u2502");
+                } 
+            }
+
+            if (row.equals(lastRow)) {
+                System.out.println();
+                for (String col : colLabels) {
+                        System.out.print(lines + "\u253b");
+                }
+                System.out.println(lines + "\u251b");
+            }
+            System.out.print("\n");
+        }
+        
 
     }
 }
